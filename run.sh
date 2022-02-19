@@ -1,0 +1,1 @@
+mvn clean compile assembly:single && docker build -t discordle . && docker run -d --env DISCORDLE_TOKEN discordle:latest
