@@ -46,6 +46,10 @@ public class WordGuess {
         return Arrays.stream(letterGuesses).map(LetterGuess::state).allMatch(LetterState.CORRECT::equals);
     }
 
+    public LetterGuess getLetterGuess(int letterIdx) {
+        return letterGuesses.length > letterIdx ? letterGuesses[letterIdx] : null;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("`");

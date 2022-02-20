@@ -1,11 +1,13 @@
 package io.chrislowe.discordle.game;
 
+import io.chrislowe.discordle.game.guess.WordGuess;
 import io.chrislowe.discordle.game.words.Dictionary;
 import io.chrislowe.discordle.game.words.WordList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class GameManager {
@@ -15,6 +17,7 @@ public class GameManager {
     private final WordList wordList;
     private Set<String> activePlayerIds;
     private Game game;
+    private boolean gameIsActive;
 
     public GameManager() {
         dictionary = new Dictionary();
@@ -26,10 +29,11 @@ public class GameManager {
         logger.info("Starting new game");
         activePlayerIds = new HashSet<>();
         game = new Game(wordList.getRandomWord());
+        gameIsActive = true;
     }
 
     public SubmissionOutcome submitGuess(String playerId, String guess) {
-        if (game == null) {
+        if (!gameIsActive) {
             return SubmissionOutcome.GAME_UNAVAILABLE;
         } else if (activePlayerIds.contains(playerId)) {
             return SubmissionOutcome.ALREADY_SUBMITTED;
@@ -48,7 +52,7 @@ public class GameManager {
         if (gameStatus == Game.GameStatus.PLAYING) {
             return SubmissionOutcome.ACCEPTED;
         } else {
-            game = null;
+            gameIsActive = false;
             if (gameStatus == Game.GameStatus.WON) {
                 return SubmissionOutcome.GAME_WON;
             } else {
@@ -57,7 +61,7 @@ public class GameManager {
         }
     }
 
-    public String getGuesses() {
-        return game.toString();
+    public List<WordGuess> getWordGuesses() {
+        return game.getWordGuesses();
     }
 }

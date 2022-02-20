@@ -5,15 +5,20 @@ import discord4j.core.DiscordClient;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.object.command.ApplicationCommandOption;
+import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.core.spec.InteractionFollowupCreateSpec;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.chrislowe.discordle.game.GameManager;
 import io.chrislowe.discordle.game.SubmissionOutcome;
 import io.chrislowe.discordle.util.FixedTimeScheduler;
+import io.chrislowe.discordle.util.WordGraphicBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Locale;
@@ -98,18 +103,35 @@ public class Main {
 
                 SubmissionOutcome outcome = gameManager.submitGuess(playerId, word);
                 String response = switch (outcome) {
-                    case ACCEPTED -> "Incorrect. Guesses:\n" + gameManager.getGuesses();
-                    case GAME_WON -> "Winner winner chicken dinner!\n" + gameManager.getGuesses();
-                    case GAME_LOST -> "Incorrect. Better luck next time.\n" + gameManager.getGuesses();
+                    case ACCEPTED, GAME_WON, GAME_LOST -> null;
                     case INVALID_WORD -> "Your word is not in the dictionary.";
                     case GAME_UNAVAILABLE -> "There is currently no game going on. Games begin at 12AM/12PM PST.";
                     case ALREADY_SUBMITTED -> "You've already submitted a word for this game.";
                     case NOT_ENOUGH_LETTERS, TOO_MANY_LETTERS -> "Your submission must have 5 letters";
                 };
 
-                yield event.reply(response);
+                if (response != null) {
+                    yield event.reply(response);
+                } else {
+                    yield event.deferReply().then(createGameBoardFollowup(event));
+                }
             }
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
         };
+    }
+
+    public static Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event) {
+        byte[] gameImage = new WordGraphicBuilder(5, 5)
+                .addWordGuesses(gameManager.getWordGuesses())
+                .buildAsPng();
+
+        EmbedCreateSpec embed = EmbedCreateSpec.builder()
+                .image("attachment://game-board.png")
+                .build();
+
+        return event.createFollowup(InteractionFollowupCreateSpec.builder()
+                .addFile("game-board.png", new ByteArrayInputStream(gameImage))
+                .addEmbed(embed)
+                .build()).then();
     }
 }

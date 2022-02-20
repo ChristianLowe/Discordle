@@ -34,6 +34,10 @@ public class Game {
         }
     }
 
+    public List<WordGuess> getWordGuesses() {
+        return wordGuesses;
+    }
+
     @Override
     public String toString() {
         return wordGuesses.stream().map(WordGuess::toString).collect(Collectors.joining("\n"));
