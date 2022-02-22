@@ -32,3 +32,6 @@ The code in this project is licensed under [the MIT license](https://tldrlegal.c
 
 The dictionary and wordlist are from the official [Wordle game](https://www.nytimes.com/games/wordle/index.html),
 developed by Josh Wardle.
+
+## TODO
+Add a virtual keyboard.
