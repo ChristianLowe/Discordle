@@ -27,7 +27,7 @@ public class Game {
 
         if (wordGuess.isCorrectAnswer()) {
             return GameStatus.WON;
-        } else if (wordGuesses.size() == 5) {
+        } else if (wordGuesses.size() == 6) {
             return GameStatus.LOST;
         } else {
             return GameStatus.PLAYING;
