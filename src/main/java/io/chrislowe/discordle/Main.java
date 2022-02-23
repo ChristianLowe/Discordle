@@ -121,7 +121,7 @@ public class Main {
     }
 
     public static Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event) {
-        byte[] gameImage = new WordGraphicBuilder(5, 5)
+        byte[] gameImage = new WordGraphicBuilder(5, 6)
                 .addWordGuesses(gameManager.getWordGuesses())
                 .buildAsPng();
 
