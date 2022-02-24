@@ -38,6 +38,10 @@ public class Game {
         return wordGuesses;
     }
 
+    public String getTargetWord() {
+        return targetWord;
+    }
+
     @Override
     public String toString() {
         return wordGuesses.stream().map(WordGuess::toString).collect(Collectors.joining("\n"));

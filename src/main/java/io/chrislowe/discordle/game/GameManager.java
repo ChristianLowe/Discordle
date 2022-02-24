@@ -32,6 +32,10 @@ public class GameManager {
         gameIsActive = true;
     }
 
+    public Game getGame() {
+        return game;
+    }
+
     public SubmissionOutcome submitGuess(String playerId, String guess) {
         if (!gameIsActive) {
             return SubmissionOutcome.GAME_UNAVAILABLE;

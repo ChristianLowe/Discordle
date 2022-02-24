@@ -112,22 +112,32 @@ public class Main {
 
                 if (response != null) {
                     yield event.reply(response);
-                } else {
-                    yield event.deferReply().then(createGameBoardFollowup(event));
+                }
+                else {
+                    yield event.deferReply().then(createGameBoardFollowup(event, getDescriptionForOutcome(outcome)));
                 }
             }
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
         };
     }
 
-    public static Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event) {
+    public static String getDescriptionForOutcome(SubmissionOutcome outcome){
+        return switch (outcome) {
+            case GAME_LOST -> String.format("The correct word was %s.", gameManager.getGame().getTargetWord());
+            default -> "";
+        };
+    }
+
+    public static Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String response) {
         byte[] gameImage = new WordGraphicBuilder(5, 6)
                 .addWordGuesses(gameManager.getWordGuesses())
                 .buildAsPng();
 
         EmbedCreateSpec embed = EmbedCreateSpec.builder()
                 .image("attachment://game-board.png")
+                .description(response)
                 .build();
+
 
         return event.createFollowup(InteractionFollowupCreateSpec.builder()
                 .addFile("game-board.png", new ByteArrayInputStream(gameImage))
