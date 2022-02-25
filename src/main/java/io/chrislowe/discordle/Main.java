@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.LocalTime;
@@ -120,9 +119,10 @@ public class Main {
         };
     }
 
-    public static String getDescriptionForOutcome(SubmissionOutcome outcome){
+    @SuppressWarnings("SwitchStatementWithTooFewBranches")
+    public static String getDescriptionForOutcome(SubmissionOutcome outcome) {
         return switch (outcome) {
-            case GAME_LOST -> String.format("The correct word was %s.", gameManager.getTargetWord()));
+            case GAME_LOST -> String.format("The correct word was %s.", gameManager.getTargetWord());
             default -> "";
         };
     }
@@ -136,7 +136,6 @@ public class Main {
                 .image("attachment://game-board.png")
                 .description(response)
                 .build();
-
 
         return event.createFollowup(InteractionFollowupCreateSpec.builder()
                 .addFile("game-board.png", new ByteArrayInputStream(gameImage))
