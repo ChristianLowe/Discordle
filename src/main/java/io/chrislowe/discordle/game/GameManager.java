@@ -32,8 +32,8 @@ public class GameManager {
         gameIsActive = true;
     }
 
-    public Game getGame() {
-        return game;
+    public String getTargetWord() {
+        return game.getTargetWord();
     }
 
     public SubmissionOutcome submitGuess(String playerId, String guess) {

@@ -112,8 +112,7 @@ public class Main {
 
                 if (response != null) {
                     yield event.reply(response);
-                }
-                else {
+                } else {
                     yield event.deferReply().then(createGameBoardFollowup(event, getDescriptionForOutcome(outcome)));
                 }
             }
@@ -123,7 +122,7 @@ public class Main {
 
     public static String getDescriptionForOutcome(SubmissionOutcome outcome){
         return switch (outcome) {
-            case GAME_LOST -> String.format("The correct word was %s.", gameManager.getGame().getTargetWord());
+            case GAME_LOST -> String.format("The correct word was %s.", gameManager.getTargetWord()));
             default -> "";
         };
     }
