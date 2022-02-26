@@ -1,5 +1,6 @@
 package io.chrislowe.discordle.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.chrislowe.discordle.game.guess.LetterGuess;
 import io.chrislowe.discordle.game.guess.LetterState;
 import io.chrislowe.discordle.game.guess.WordGuess;
@@ -26,6 +27,7 @@ public class WordGraphicBuilder {
     private static final Color CORRECT_COLOR = new Color(0, 153, 0);
     private static final Color MISMATCH_COLOR = new Color(170, 170, 0);
     private static final Color MISSING_COLOR = new Color(64, 64, 64);
+    private static final Color UNKNOWN_COLOR = new Color(128, 128, 128);
     private static final Color TEXT_COLOR = new Color(255, 255, 255);
 
     private final List<WordGuess> wordGuesses;
@@ -59,7 +61,8 @@ public class WordGraphicBuilder {
         }
     }
 
-    private BufferedImage buildAsBufferedImage() {
+    @VisibleForTesting
+    BufferedImage buildAsBufferedImage() {
         BufferedImage image = new BufferedImage(getImageWidth(), getImageHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics();
 
@@ -76,8 +79,16 @@ public class WordGraphicBuilder {
             int gridHeight = (BOX_PADDING_Y * 2) + BOX_SIZE;
             for (int row = 0; row < maxWordGuesses; row++) {
                 WordGuess wordGuess = wordGuesses.size() > row ? wordGuesses.get(row) : null;
+                // Left pad for keyboard, when |wordGuess| < wordSize 
+                int leftpad = wordGuess == null
+                    ? 0
+                    : ((gridWidth * (wordSize - wordGuess.size())) + BOX_PADDING_X) / 2;
                 for (int col = 0; col < wordSize; col++) {
-                    int startX = (gridWidth * col) + BOX_PADDING_X;
+                    // Short circuit for keyboard, when |wordGuess| < wordSize
+                    if (wordGuess != null && col == wordGuess.size()) {
+                        break;
+                    }
+                    int startX = (gridWidth * col) + BOX_PADDING_X + leftpad;
                     int startY = (gridHeight * row) + BOX_PADDING_Y;
 
                     LetterGuess letterGuess = wordGuess != null ? wordGuess.getLetterGuess(col) : null;
@@ -93,6 +104,8 @@ public class WordGraphicBuilder {
                             graphics.setColor(MISMATCH_COLOR);
                         } else if (letterGuess.state() == LetterState.MISSING) {
                             graphics.setColor(MISSING_COLOR);
+                        } else {
+                            graphics.setColor(UNKNOWN_COLOR);
                         }
                         graphics.fillRoundRect(startX, startY, BOX_SIZE, BOX_SIZE, BOX_CURVE, BOX_CURVE);
                     }

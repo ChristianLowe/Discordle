@@ -11,16 +11,21 @@ import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.chrislowe.discordle.game.GameManager;
 import io.chrislowe.discordle.game.SubmissionOutcome;
+import io.chrislowe.discordle.game.guess.LetterGuess;
+import io.chrislowe.discordle.game.guess.LetterState;
+import io.chrislowe.discordle.game.guess.WordGuess;
 import io.chrislowe.discordle.util.FixedTimeScheduler;
 import io.chrislowe.discordle.util.WordGraphicBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Mono;
-
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -76,6 +81,14 @@ public class Main {
                 .createGlobalApplicationCommand(applicationId, submitCommandRequest)
                 .subscribe();
 
+        ApplicationCommandRequest keyboardCommandRequest = ApplicationCommandRequest.builder()
+            .name("keyboard")
+            .description("View the current keyboard!")
+            .build();
+        gateway.getRestClient().getApplicationService()
+            .createGlobalApplicationCommand(applicationId, keyboardCommandRequest)
+            .subscribe();
+
         gateway.on(ChatInputInteractionEvent.class, Main::handleInteractionEvent).subscribe();
     }
 
@@ -115,6 +128,7 @@ public class Main {
                     yield event.deferReply().then(createGameBoardFollowup(event, getDescriptionForOutcome(outcome)));
                 }
             }
+            case "keyboard" -> event.deferReply().then(createKeyBoardFollowup(event));
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
         };
     }
@@ -141,5 +155,47 @@ public class Main {
                 .addFile("game-board.png", new ByteArrayInputStream(gameImage))
                 .addEmbed(embed)
                 .build()).then();
+    }
+
+    public static Mono<Void> createKeyBoardFollowup(ChatInputInteractionEvent event) {
+        String[] keyboardRows = {
+            "QWERTYUIOP",
+            "ASDFGHJKL",
+            "ZXCVBNM"
+        };
+        
+        var letterStates = new HashMap<Character, LetterState>();
+        for (var guess : gameManager.getWordGuesses()) {
+            for (LetterGuess letterGuess : guess) {
+                letterStates.merge(letterGuess.letter(), letterGuess.state(), (a, b) -> {
+                    if (a == LetterState.CORRECT || b == LetterState.CORRECT) {
+                        return LetterState.CORRECT;
+                    } else if (a == LetterState.MISMATCH || b == LetterState.MISMATCH) {
+                        return LetterState.MISMATCH;
+                    } else {
+                        return LetterState.MISSING;
+                    }
+                });
+            }
+        }
+        
+        byte[] gameImage = new WordGraphicBuilder(10, 3)
+            .addWordGuesses(Arrays.stream(keyboardRows).sequential().map(keyRow ->
+                new WordGuess(keyRow.chars()
+                    .mapToObj((int ch) -> new LetterGuess((char) ch,
+                        letterStates.getOrDefault((char) ch, null)))
+                    .toArray(LetterGuess[]::new)
+                )).collect(Collectors.toList()))
+            .buildAsPng();
+
+        EmbedCreateSpec embed = EmbedCreateSpec.builder()
+            .image("attachment://key-board.png")
+//            .description()
+            .build();
+
+        return event.createFollowup(InteractionFollowupCreateSpec.builder()
+            .addFile("key-board.png", new ByteArrayInputStream(gameImage))
+            .addEmbed(embed)
+            .build()).then();
     }
 }
