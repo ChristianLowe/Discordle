@@ -1,10 +1,10 @@
 package io.chrislowe.discordle.game.guess;
 
 import com.google.common.base.CharMatcher;
-
 import java.util.Arrays;
+import java.util.Iterator;
 
-public class WordGuess {
+public class WordGuess implements Iterable<LetterGuess> {
     private static final CharMatcher wordMatcher = CharMatcher.ascii().and(CharMatcher.inRange('A', 'Z'));
 
     private final LetterGuess[] letterGuesses;
@@ -41,6 +41,10 @@ public class WordGuess {
             }
         }
     }
+    
+    public WordGuess(LetterGuess[] letterGuesses) {
+        this.letterGuesses = letterGuesses;
+    }
 
     public boolean isCorrectAnswer() {
         return Arrays.stream(letterGuesses).map(LetterGuess::state).allMatch(LetterState.CORRECT::equals);
@@ -48,6 +52,15 @@ public class WordGuess {
 
     public LetterGuess getLetterGuess(int letterIdx) {
         return letterGuesses.length > letterIdx ? letterGuesses[letterIdx] : null;
+    }
+    
+    public int size() {
+        return  letterGuesses.length;
+    }
+
+    @Override
+    public Iterator<LetterGuess> iterator() {
+        return Arrays.stream(letterGuesses).iterator();
     }
 
     @Override
