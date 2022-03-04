@@ -5,11 +5,13 @@ import io.chrislowe.discordle.game.words.Dictionary;
 import io.chrislowe.discordle.game.words.WordList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Service
 public class GameManager {
     private static final Logger logger = LoggerFactory.getLogger(GameManager.class);
 

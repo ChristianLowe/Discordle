@@ -25,20 +25,30 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 import reactor.core.publisher.Mono;
 
+@SpringBootApplication
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private static final String envTokenName = "DISCORDLE_TOKEN";
-    private static final String envAdminIdName = "DISCORDLE_ADMIN_ID";
+    private GameManager gameManager;
 
-    private static final GameManager gameManager = new GameManager();
+    @Value("${DISCORDLE_ADMIN_ID}")
+    private String adminId;
 
     public static void main(String[] args) {
-        String token = System.getenv(envTokenName);
+        SpringApplication.run(Main.class, args);
+    }
+
+    @Bean
+    public GatewayDiscordClient gateway(@Value("${DISCORDLE_TOKEN}") String token) {
         if (Strings.isNullOrEmpty(token)) {
-            throw new RuntimeException(envTokenName + " must be set in your environmental variables");
+            throw new RuntimeException("DISCORDLE_TOKEN must be set in your environmental variables");
         }
 
         GatewayDiscordClient gateway = DiscordClient.create(token).login().block(Duration.ofSeconds(30));
@@ -47,16 +57,10 @@ public class Main {
         }
 
         registerCommands(gateway);
-
-        var scheduler = new FixedTimeScheduler(gameManager::startNewGame);
-        scheduler.addDailyExecution(LocalTime.NOON);
-        scheduler.addDailyExecution(LocalTime.MIDNIGHT);
-
-        logger.info("Discordle is ready");
-        gateway.onDisconnect().block();
+        return gateway;
     }
 
-    private static void registerCommands(GatewayDiscordClient gateway) {
+    public void registerCommands(GatewayDiscordClient gateway) {
         long applicationId = gateway.getRestClient().getApplicationId().blockOptional().orElseThrow();
 
         ApplicationCommandRequest restartCommandRequest = ApplicationCommandRequest.builder()
@@ -89,15 +93,22 @@ public class Main {
             .createGlobalApplicationCommand(applicationId, keyboardCommandRequest)
             .subscribe();
 
-        gateway.on(ChatInputInteractionEvent.class, Main::handleInteractionEvent).subscribe();
+        gateway.on(ChatInputInteractionEvent.class, this::handleInteractionEvent).subscribe();
     }
 
-    public static Mono<Void> handleInteractionEvent(ChatInputInteractionEvent event) {
+    @Bean
+    public FixedTimeScheduler scheduler() {
+        var scheduler = new FixedTimeScheduler(gameManager::startNewGame);
+        scheduler.addDailyExecution(LocalTime.NOON);
+        scheduler.addDailyExecution(LocalTime.MIDNIGHT);
+        return scheduler;
+    }
+
+    public Mono<Void> handleInteractionEvent(ChatInputInteractionEvent event) {
         String command = event.getCommandName();
         logger.info("Command received: {}", command);
         return switch (command) {
             case "restart" -> {
-                String adminId = System.getenv(envAdminIdName);
                 String playerId = event.getInteraction().getUser().getId().asString();
                 if (!playerId.equals(adminId)) {
                     yield event.reply("Unauthorized to perform this action");
@@ -134,14 +145,14 @@ public class Main {
     }
 
     @SuppressWarnings("SwitchStatementWithTooFewBranches")
-    public static String getDescriptionForOutcome(SubmissionOutcome outcome) {
+    public String getDescriptionForOutcome(SubmissionOutcome outcome) {
         return switch (outcome) {
             case GAME_LOST -> String.format("The correct word was %s.", gameManager.getTargetWord());
             default -> "";
         };
     }
 
-    public static Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String response) {
+    public Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String response) {
         byte[] gameImage = new WordGraphicBuilder(5, 6)
                 .addWordGuesses(gameManager.getWordGuesses())
                 .buildAsPng();
@@ -157,7 +168,7 @@ public class Main {
                 .build()).then();
     }
 
-    public static Mono<Void> createKeyBoardFollowup(ChatInputInteractionEvent event) {
+    public Mono<Void> createKeyBoardFollowup(ChatInputInteractionEvent event) {
         String[] keyboardRows = {
             "QWERTYUIOP",
             "ASDFGHJKL",
@@ -190,12 +201,16 @@ public class Main {
 
         EmbedCreateSpec embed = EmbedCreateSpec.builder()
             .image("attachment://key-board.png")
-//            .description()
             .build();
 
         return event.createFollowup(InteractionFollowupCreateSpec.builder()
             .addFile("key-board.png", new ByteArrayInputStream(gameImage))
             .addEmbed(embed)
             .build()).then();
+    }
+
+    @Autowired
+    public void setGameManager(GameManager gameManager) {
+        this.gameManager = gameManager;
     }
 }
