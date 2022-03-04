@@ -30,6 +30,6 @@ public class FixedTimeScheduler {
         if (localNow.isAfter(startDateTime)) {
             startDateTime = startDateTime.plusDays(1);
         }
-        return Duration.between(localNow, startDateTime).getSeconds();
+        return Duration.between(localNow, startDateTime).getSeconds() + 1;
     }
 }
