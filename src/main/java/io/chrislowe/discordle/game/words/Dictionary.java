@@ -13,7 +13,7 @@ public class Dictionary {
 
     public Dictionary() {
         try {
-            InputStream input = Dictionary.class.getResourceAsStream("/dictionary.txt");
+            InputStream input = Dictionary.class.getResourceAsStream("/words/dictionary.txt");
             if (input == null) {
                 throw new IOException("dictionary.txt not found in resources");
             }

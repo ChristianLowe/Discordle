@@ -10,7 +10,7 @@ public class WordList {
 
     public WordList() {
         try {
-            InputStream input = WordList.class.getResourceAsStream("/wordlist.txt");
+            InputStream input = WordList.class.getResourceAsStream("/words/wordlist.txt");
             if (input == null) {
                 throw new IOException("wordlist.txt not found in resources");
             }
