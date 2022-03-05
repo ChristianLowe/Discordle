@@ -1,6 +1,7 @@
 package io.chrislowe.discordle.game.words;
 
 import com.google.common.hash.BloomFilter;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,6 +9,7 @@ import java.util.Locale;
 import java.util.Scanner;
 
 @SuppressWarnings("UnstableApiUsage")
+@Service
 public class Dictionary {
     private final BloomFilter<String> bloomFilter;
 

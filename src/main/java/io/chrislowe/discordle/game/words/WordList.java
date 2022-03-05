@@ -1,10 +1,13 @@
 package io.chrislowe.discordle.game.words;
 
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Service
 public class WordList {
     private final List<String> words;
 

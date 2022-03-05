@@ -18,6 +18,9 @@
         <version.discord4j>3.2.1</version.discord4j>
         <version.logback-classic>1.3.0-alpha14</version.logback-classic>
         <version.guava>31.0.1-jre</version.guava>
+        <version.liquibase>4.8.0</version.liquibase>
+        <version.db.h2>2.1.210</version.db.h2>
+        <version.db.postgres>42.3.3</version.db.postgres>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
@@ -32,6 +35,21 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${version.guava}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.liquibase</groupId>
+            <artifactId>liquibase-core</artifactId>
+            <version>${version.liquibase}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${version.db.h2}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${version.db.postgres}</version>
         </dependency>
 
         <!-- Spring dependencies - versions managed by parent -->

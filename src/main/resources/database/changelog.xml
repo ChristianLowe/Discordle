@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="20220302-1-1" author="discordle">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="USERS"/></not>
+        </preConditions>
+        <createTable tableName="USERS">
+            <column name="DISCORD_ID" type="varchar(20)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="IS_ADMIN" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DATETIME_CREATED" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="USERS" indexName="IDX_USERS_DATETIME_CREATED">
+            <column name="DATETIME_CREATED"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20220302-1-2" author="discordle">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="GUILDS"/></not>
+        </preConditions>
+        <createTable tableName="GUILDS">
+            <column name="GUILD_ID" type="varchar(20)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="HAS_CURRENT_GAME" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DATETIME_CREATED" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="GUILDS" indexName="IDX_GUILDS_DATETIME_CREATED">
+            <column name="DATETIME_CREATED"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20220302-1-3" author="discordle">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="GAMES"/></not>
+        </preConditions>
+        <createTable tableName="GAMES">
+            <column name="GAME_ID" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="GUILD_ID" type="varchar(20)">
+                <constraints references="GUILDS" foreignKeyName="GAMES_GUILD_ID_FK" nullable="false"/>
+            </column>
+            <column name="WORD" type="varchar(5)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="STATUS" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DATETIME_CREATED" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="GAMES" indexName="IDX_GAMES_GUILD_ID">
+            <column name="GUILD_ID"/>
+        </createIndex>
+        <createIndex tableName="GAMES" indexName="IDX_GAMES_STATUS">
+            <column name="STATUS"/>
+        </createIndex>
+        <createIndex tableName="GAMES" indexName="IDX_GAMES_DATETIME_CREATED">
+            <column name="DATETIME_CREATED"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20220302-1-4" author="discordle">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="GAME_MOVES"/></not>
+        </preConditions>
+        <createTable tableName="GAME_MOVES">
+            <column name="GAME_MOVE_ID" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="GAME_ID" type="int">
+                <constraints references="GAMES" foreignKeyName="GAME_MOVES_GAME_ID_FK" nullable="false"/>
+            </column>
+            <column name="DISCORD_ID" type="varchar(20)">
+                <constraints references="USERS" foreignKeyName="GAME_MOVES_DISCORD_ID_FK" nullable="false"/>
+            </column>
+            <column name="WORD" type="varchar(5)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NEW_YELLOWS_GUESSED" type="tinyint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NEW_GREENS_GUESSED" type="tinyint" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="DATETIME_CREATED" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <createIndex tableName="GAME_MOVES" indexName="IDX_GAME_MOVES_GAME_ID">
+            <column name="GAME_ID"/>
+        </createIndex>
+        <createIndex tableName="GAME_MOVES" indexName="IDX_GAME_MOVES_DISCORD_ID">
+            <column name="DISCORD_ID"/>
+        </createIndex>
+        <createIndex tableName="GAME_MOVES" indexName="IDX_GAME_MOVES_DATETIME_CREATED">
+            <column name="DATETIME_CREATED"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

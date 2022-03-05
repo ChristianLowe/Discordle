@@ -2,9 +2,8 @@
 This Discord bot is a fun game that lets your community play "Wordle"-like puzzles cooperatively.
 
 ## Invite to your server
-The bot currently does not support multiple servers, so if you want to invite to your server,
-you will have to register your own bot through Discord's developer portal and host your own copy.
-Multi-server support is on the Todo list!
+You can invite Discordle to your server with this link:
+https://discord.com/api/oauth2/authorize?client_id=944401438233202728&permissions=2048&scope=bot%20applications.commands
 
 ## Prerequisites to Install
 
@@ -15,8 +14,9 @@ Multi-server support is on the Todo list!
 
 Before getting started, you will need to [create your bot through Discord](https://discordapp.com/developers/applications/me).
 After getting the credentials for your new bot, export a new environmental variable named `DISCORDLE_TOKEN` which
-holds your bots API token. You can also optionally set a variable `DISCORDLE_ADMIN_ID` which will limit sensitive 
-commands to only your Discord ID. To find your Discord ID, right-click your self on Discord and click "Copy ID".
+holds your bots API token. When you run your first command, your user will be added to the users table; you can
+set yourself as an admin in this table which will allow your Discord ID to run sensitive commands. 
+To find your Discord ID, right-click your self on Discord and click "Copy ID".
 
 After cloning this repository, run this command in the project's root folder: `chmod +x run.sh && ./run.sh`
 
@@ -24,7 +24,7 @@ After cloning this repository, run this command in the project's root folder: `c
 
 Thank you for your interest. If you'd like to contribute, please fork the repository and use a feature
 branch. Pull requests are warmly welcome. Alternatively, let me know of any issues you face by filing a
-report in the project's [issue tracker](https://github.com/ChristianLowe/Omnic/issues).
+report in the project's [issue tracker](https://github.com/ChristianLowe/Discordle/issues).
 
 ## Licensing
 

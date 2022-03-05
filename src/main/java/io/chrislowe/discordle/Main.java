@@ -1,6 +1,7 @@
 package io.chrislowe.discordle;
 
 import com.google.common.base.Strings;
+import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
@@ -9,20 +10,15 @@ import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.core.spec.InteractionFollowupCreateSpec;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
-import io.chrislowe.discordle.game.GameManager;
+import io.chrislowe.discordle.database.dbo.User;
+import io.chrislowe.discordle.database.service.DatabaseService;
+import io.chrislowe.discordle.game.GameService;
 import io.chrislowe.discordle.game.SubmissionOutcome;
 import io.chrislowe.discordle.game.guess.LetterGuess;
 import io.chrislowe.discordle.game.guess.LetterState;
 import io.chrislowe.discordle.game.guess.WordGuess;
 import io.chrislowe.discordle.util.FixedTimeScheduler;
 import io.chrislowe.discordle.util.WordGraphicBuilder;
-import java.io.ByteArrayInputStream;
-import java.time.Duration;
-import java.time.LocalTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,14 +28,20 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import reactor.core.publisher.Mono;
 
+import java.io.ByteArrayInputStream;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.stream.Collectors;
+
 @SpringBootApplication
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private GameManager gameManager;
-
-    @Value("${DISCORDLE_ADMIN_ID}")
-    private String adminId;
+    private GameService gameService;
+    private DatabaseService databaseService;
 
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);
@@ -58,6 +60,14 @@ public class Main {
 
         registerCommands(gateway);
         return gateway;
+    }
+
+    @Bean
+    public FixedTimeScheduler scheduler() {
+        var scheduler = new FixedTimeScheduler(databaseService::resetActiveGames);
+        scheduler.addDailyExecution(LocalTime.NOON);
+        scheduler.addDailyExecution(LocalTime.MIDNIGHT);
+        return scheduler;
     }
 
     public void registerCommands(GatewayDiscordClient gateway) {
@@ -96,35 +106,34 @@ public class Main {
         gateway.on(ChatInputInteractionEvent.class, this::handleInteractionEvent).subscribe();
     }
 
-    @Bean
-    public FixedTimeScheduler scheduler() {
-        var scheduler = new FixedTimeScheduler(gameManager::startNewGame);
-        scheduler.addDailyExecution(LocalTime.NOON);
-        scheduler.addDailyExecution(LocalTime.MIDNIGHT);
-        return scheduler;
-    }
-
     public Mono<Void> handleInteractionEvent(ChatInputInteractionEvent event) {
         String command = event.getCommandName();
         logger.info("Command received: {}", command);
+
+        String discordId = event.getInteraction().getUser().getId().asString();
+
         return switch (command) {
             case "restart" -> {
-                String playerId = event.getInteraction().getUser().getId().asString();
-                if (!playerId.equals(adminId)) {
-                    yield event.reply("Unauthorized to perform this action");
+                User user = databaseService.getUser(discordId);
+                if (user.isAdmin() != null && user.isAdmin()) {
+                    databaseService.resetActiveGames();
+                    yield event.reply("Games reset");
                 } else {
-                    gameManager.startNewGame();
-                    yield event.reply("Game restarted");
+                    yield event.reply("Unauthorized to perform this action");
                 }
             }
             case "submit" -> {
-                String playerId = event.getInteraction().getUser().getId().asString();
+                String guildId = event.getInteraction().getGuildId().map(Snowflake::asString).orElse(null);
+                if (guildId == null) {
+                    yield event.reply("You must run this command in a discord server");
+                }
+
                 String word = event
                         .getOption("word").orElseThrow()
                         .getValue().orElseThrow()
                         .asString().toUpperCase(Locale.ROOT);
 
-                SubmissionOutcome outcome = gameManager.submitGuess(playerId, word);
+                SubmissionOutcome outcome = gameService.submitGuess(guildId, discordId, word);
                 String response = switch (outcome) {
                     case ACCEPTED, GAME_WON, GAME_LOST -> null;
                     case INVALID_WORD -> "Your word is not in the dictionary.";
@@ -136,25 +145,33 @@ public class Main {
                 if (response != null) {
                     yield event.reply(response);
                 } else {
-                    yield event.deferReply().then(createGameBoardFollowup(event, getDescriptionForOutcome(outcome)));
+                    String description = getDescriptionForOutcome(outcome, guildId);
+                    yield event.deferReply().then(createGameBoardFollowup(event, guildId, description));
                 }
             }
-            case "keyboard" -> event.deferReply().then(createKeyBoardFollowup(event));
+            case "keyboard" -> {
+                String guildId = event.getInteraction().getGuildId().map(Snowflake::asString).orElse(null);
+                if (guildId == null) {
+                    yield event.reply("You must run this command in a discord server");
+                }
+
+                yield event.deferReply().then(createKeyBoardFollowup(event, guildId));
+            }
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
         };
     }
 
     @SuppressWarnings("SwitchStatementWithTooFewBranches")
-    public String getDescriptionForOutcome(SubmissionOutcome outcome) {
+    public String getDescriptionForOutcome(SubmissionOutcome outcome, String guildId) {
         return switch (outcome) {
-            case GAME_LOST -> String.format("The correct word was %s.", gameManager.getTargetWord());
+            case GAME_LOST -> String.format("The correct word was %s.", gameService.getTargetWord(guildId));
             default -> "";
         };
     }
 
-    public Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String response) {
+    public Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String guildId, String response) {
         byte[] gameImage = new WordGraphicBuilder(5, 6)
-                .addWordGuesses(gameManager.getWordGuesses())
+                .addWordGuesses(gameService.getWordGuesses(guildId))
                 .buildAsPng();
 
         EmbedCreateSpec embed = EmbedCreateSpec.builder()
@@ -168,7 +185,7 @@ public class Main {
                 .build()).then();
     }
 
-    public Mono<Void> createKeyBoardFollowup(ChatInputInteractionEvent event) {
+    public Mono<Void> createKeyBoardFollowup(ChatInputInteractionEvent event, String guildId) {
         String[] keyboardRows = {
             "QWERTYUIOP",
             "ASDFGHJKL",
@@ -176,7 +193,7 @@ public class Main {
         };
         
         var letterStates = new HashMap<Character, LetterState>();
-        for (var guess : gameManager.getWordGuesses()) {
+        for (var guess : gameService.getWordGuesses(guildId)) {
             for (LetterGuess letterGuess : guess) {
                 letterStates.merge(letterGuess.letter(), letterGuess.state(), (a, b) -> {
                     if (a == LetterState.CORRECT || b == LetterState.CORRECT) {
@@ -210,7 +227,12 @@ public class Main {
     }
 
     @Autowired
-    public void setGameManager(GameManager gameManager) {
-        this.gameManager = gameManager;
+    public void setGameService(GameService gameService) {
+        this.gameService = gameService;
+    }
+
+    @Autowired
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
     }
 }
