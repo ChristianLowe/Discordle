@@ -143,6 +143,9 @@ public class Main {
                 };
 
                 if (response != null) {
+                    if (outcome == SubmissionOutcome.INVALID_WORD) {
+                        yield event.reply(response).withEphemeral(true);
+                    }
                     yield event.reply(response);
                 } else {
                     String description = getDescriptionForOutcome(outcome, guildId);
