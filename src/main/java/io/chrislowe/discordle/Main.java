@@ -75,7 +75,7 @@ public class Main {
 
         ApplicationCommandRequest restartCommandRequest = ApplicationCommandRequest.builder()
                 .name("restart")
-                .description("Manually resets the state of the Game")
+                .description("Manually resets the state of the games for all guilds")
                 .build();
         gateway.getRestClient().getApplicationService()
                 .createGlobalApplicationCommand(applicationId, restartCommandRequest)
@@ -164,12 +164,11 @@ public class Main {
         };
     }
 
-    @SuppressWarnings("SwitchStatementWithTooFewBranches")
     public String getDescriptionForOutcome(SubmissionOutcome outcome, String guildId) {
-        return switch (outcome) {
-            case GAME_LOST -> String.format("The correct word was %s.", gameService.getTargetWord(guildId));
-            default -> "";
-        };
+        if (outcome == SubmissionOutcome.GAME_LOST) {
+            return String.format("The correct word was %s.", gameService.getTargetWord(guildId));
+        }
+        return "";
     }
 
     public Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String guildId, String response) {
@@ -194,7 +193,7 @@ public class Main {
             "ASDFGHJKL",
             "ZXCVBNM"
         };
-        
+
         var letterStates = new HashMap<Character, LetterState>();
         for (var guess : gameService.getWordGuesses(guildId)) {
             for (LetterGuess letterGuess : guess) {
@@ -209,7 +208,7 @@ public class Main {
                 });
             }
         }
-        
+
         byte[] gameImage = new WordGraphicBuilder(10, 3)
             .addWordGuesses(Arrays.stream(keyboardRows).sequential().map(keyRow ->
                 new WordGuess(keyRow.chars()

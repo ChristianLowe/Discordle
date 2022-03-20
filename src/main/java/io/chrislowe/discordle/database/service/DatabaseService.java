@@ -75,8 +75,7 @@ public class DatabaseService {
         game.setWord(wordList.getRandomWord());
         game.setStatus(GameStatus.ACTIVE);
         game.setDatetimeCreated(Instant.now());
-        gameRepository.save(game);
-        return game;
+        return gameRepository.save(game);
     }
 
     private User addUser(String discordId) {
@@ -84,8 +83,7 @@ public class DatabaseService {
         user.setDiscordId(discordId);
         user.setAdmin(false);
         user.setDatetimeCreated(Instant.now());
-        userRepository.save(user);
-        return user;
+        return userRepository.save(user);
     }
 
     private Guild addGuild(String guildId) {
@@ -93,8 +91,7 @@ public class DatabaseService {
         guild.setGuildId(guildId);
         guild.setHasCurrentGame(false);
         guild.setDatetimeCreated(Instant.now());
-        guildRepository.save(guild);
-        return guild;
+        return guildRepository.save(guild);
     }
 
     @Autowired

@@ -40,11 +40,6 @@ public class WordGraphicBuilder {
         this.maxWordGuesses = maxWordGuesses;
     }
 
-    public WordGraphicBuilder addWordGuess(WordGuess wordGuess) {
-        this.wordGuesses.add(wordGuess);
-        return this;
-    }
-
     public WordGraphicBuilder addWordGuesses(Collection<WordGuess> wordGuesses) {
         this.wordGuesses.addAll(wordGuesses);
         return this;

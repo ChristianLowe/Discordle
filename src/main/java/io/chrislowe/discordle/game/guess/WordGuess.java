@@ -55,7 +55,7 @@ public class WordGuess implements Iterable<LetterGuess> {
     }
     
     public int size() {
-        return  letterGuesses.length;
+        return letterGuesses.length;
     }
 
     @Override
