@@ -82,10 +82,6 @@ public class WordGuess implements Iterable<LetterGuess> {
     }
 
     private boolean isInvalidWord(String word) {
-        if (word == null) {
-            return false;
-        } else {
-            return !wordMatcher.matchesAllOf(word);
-        }
+        return word == null || !wordMatcher.matchesAllOf(word);
     }
 }
