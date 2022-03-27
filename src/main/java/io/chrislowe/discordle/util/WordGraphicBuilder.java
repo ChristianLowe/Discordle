@@ -9,6 +9,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,8 +20,8 @@ public class WordGraphicBuilder {
     private static final int BOX_PADDING_X = 4;
     private static final int BOX_PADDING_Y = 8;
 
-    private static final String FONT_NAME = "DejaVu Sans";
-    private static final int FONT_SIZE = 28;
+    private static final String FONT_NAME = "UbuntuMono-Regular.ttf";
+    private static final int FONT_SIZE = 32;
 
     private static final Color BG_COLOR = new Color(222, 211, 211);
     private static final Color EMPTY_COLOR = new Color(0, 0, 0);
@@ -33,6 +34,8 @@ public class WordGraphicBuilder {
     private final List<WordGuess> wordGuesses;
     private final int wordSize;
     private final int maxWordGuesses;
+
+    private Font font;
 
     public WordGraphicBuilder(int wordSize, int maxWordGuesses) {
         this.wordGuesses = new ArrayList<>();
@@ -62,7 +65,7 @@ public class WordGraphicBuilder {
         Graphics2D graphics = image.createGraphics();
 
         try {
-            graphics.setFont(new Font(FONT_NAME, Font.PLAIN, FONT_SIZE));
+            graphics.setFont(getWordGraphicFont());
             FontMetrics fontMetrics = graphics.getFontMetrics();
 
             // Draw background
@@ -120,6 +123,21 @@ public class WordGraphicBuilder {
             return image;
         } finally {
             graphics.dispose();
+        }
+    }
+
+    private Font getWordGraphicFont() {
+        try {
+            if (font == null) {
+                InputStream inputStream = WordGraphicBuilder.class.getResourceAsStream("/assets/" + FONT_NAME);
+                if (inputStream == null) {
+                    throw new Exception("Font " + FONT_NAME + " not found in resources");
+                }
+                font = Font.createFont(Font.TRUETYPE_FONT, inputStream).deriveFont((float)FONT_SIZE);
+            }
+            return font;
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to load font", e);
         }
     }
 
