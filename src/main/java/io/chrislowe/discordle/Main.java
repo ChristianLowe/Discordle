@@ -5,12 +5,15 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
+import discord4j.core.object.command.ApplicationCommandInteractionOption;
+import discord4j.core.object.command.ApplicationCommandInteractionOptionValue;
 import discord4j.core.object.command.ApplicationCommandOption;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.core.spec.InteractionFollowupCreateSpec;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
 import io.chrislowe.discordle.database.dbo.User;
+import io.chrislowe.discordle.database.dto.UserStats;
 import io.chrislowe.discordle.database.service.DatabaseService;
 import io.chrislowe.discordle.game.GameService;
 import io.chrislowe.discordle.game.SubmissionOutcome;
@@ -76,6 +79,12 @@ public class Main {
         ApplicationCommandRequest restartCommandRequest = ApplicationCommandRequest.builder()
                 .name("restart")
                 .description("Manually resets the state of the games for all guilds")
+                .addOption(ApplicationCommandOptionData.builder()
+                        .name("rebuild-stats")
+                        .description("Rebuild database recorded statistics")
+                        .type(ApplicationCommandOption.Type.BOOLEAN.getValue())
+                        .required(false)
+                        .build())
                 .build();
         gateway.getRestClient().getApplicationService()
                 .createGlobalApplicationCommand(applicationId, restartCommandRequest)
@@ -103,10 +112,24 @@ public class Main {
             .createGlobalApplicationCommand(applicationId, keyboardCommandRequest)
             .subscribe();
 
-        gateway.on(ChatInputInteractionEvent.class, this::handleInteractionEvent).subscribe();
+        ApplicationCommandRequest userCommandRequest = ApplicationCommandRequest.builder()
+                .name("user")
+                .description("View game stats for a given user")
+                .addOption(ApplicationCommandOptionData.builder()
+                        .name("user")
+                        .description("User to view (defaults to yourself)")
+                        .type(ApplicationCommandOption.Type.USER.getValue())
+                        .required(false)
+                        .build())
+                .build();
+        gateway.getRestClient().getApplicationService()
+                .createGlobalApplicationCommand(applicationId, userCommandRequest)
+                .subscribe();
+
+        gateway.on(ChatInputInteractionEvent.class, event -> handleInteractionEvent(event, gateway)).subscribe();
     }
 
-    public Mono<Void> handleInteractionEvent(ChatInputInteractionEvent event) {
+    public Mono<Void> handleInteractionEvent(ChatInputInteractionEvent event, GatewayDiscordClient gateway) {
         String command = event.getCommandName();
         logger.info("Command received: {}", command);
 
@@ -116,8 +139,19 @@ public class Main {
             case "restart" -> {
                 User user = databaseService.getUser(discordId);
                 if (user.isAdmin() != null && user.isAdmin()) {
-                    databaseService.resetActiveGames();
-                    yield event.reply("Games reset");
+                    event.deferReply();
+
+                    boolean rebuildStats = event.getOption("rebuild-stats")
+                                    .flatMap(ApplicationCommandInteractionOption::getValue)
+                                    .map(ApplicationCommandInteractionOptionValue::asBoolean)
+                                    .orElse(false);
+                    if (rebuildStats) {
+                        gameService.rebuildDatabaseStats();
+                        yield event.reply("Database stats rebuilt");
+                    } else {
+                        databaseService.resetActiveGames();
+                        yield event.reply("Games reset");
+                    }
                 } else {
                     yield event.reply("Unauthorized to perform this action");
                 }
@@ -159,6 +193,28 @@ public class Main {
                 }
 
                 yield event.deferReply().then(createKeyBoardFollowup(event, guildId));
+            }
+            case "user" -> {
+                String userId = event.getOption("user")
+                        .flatMap(ApplicationCommandInteractionOption::getValue)
+                        .map(value -> value.asUser().block())
+                        .map(user -> user.getId().asString())
+                        .orElse(discordId);
+                String userName = gateway.getRestClient()
+                        .getUserById(Snowflake.of(userId))
+                        .getData().block()
+                        .username();
+
+                UserStats userStats = databaseService.getUserStats(userId);
+                int totalGames = userStats.getGamesLost() + userStats.getGamesWon();
+                float winPercent = userStats.getGamesWon() / (float)((totalGames != 0) ? totalGames : 1);
+
+                String response = "Statistics for user " + userName + '\n' +
+                        userStats.getYellowsGuessed() + " new yellows guessed\n" +
+                        userStats.getGreensGuessed() + " new greens guessed\n" +
+                        userStats.getGamesWon() + '/' + totalGames +
+                        " games won (" + String.format("%.2f", winPercent) + "%).";
+                yield event.reply(response);
             }
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
         };

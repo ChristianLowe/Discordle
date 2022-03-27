@@ -1,21 +1,26 @@
 package io.chrislowe.discordle.database.service;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.chrislowe.discordle.database.dbo.Game;
 import io.chrislowe.discordle.database.dbo.GameMove;
 import io.chrislowe.discordle.database.dbo.Guild;
 import io.chrislowe.discordle.database.dbo.User;
+import io.chrislowe.discordle.database.dto.UserStats;
 import io.chrislowe.discordle.database.enums.GameStatus;
 import io.chrislowe.discordle.database.repository.GameMoveRepository;
 import io.chrislowe.discordle.database.repository.GameRepository;
 import io.chrislowe.discordle.database.repository.GuildRepository;
 import io.chrislowe.discordle.database.repository.UserRepository;
 import io.chrislowe.discordle.game.words.WordList;
+import liquibase.repackaged.org.apache.commons.collections4.IterableUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -32,13 +37,13 @@ public class DatabaseService {
         guildRepository.resetActiveGuilds();
     }
 
-    public void submitWord(Game game, User user, String word) {
+    public void submitWord(Game game, User user, String word, byte newYellows, byte newGreens) {
         var gameMove = new GameMove();
         gameMove.setGame(game);
         gameMove.setUser(user);
         gameMove.setWord(word);
-        gameMove.setNewYellowsGuessed((byte)0); // TODO
-        gameMove.setNewGreensGuessed((byte)0); // TODO
+        gameMove.setNewYellowsGuessed(newYellows);
+        gameMove.setNewGreensGuessed(newGreens);
         gameMove.setDatetimeCreated(Instant.now());
         gameMoveRepository.save(gameMove);
 
@@ -56,8 +61,41 @@ public class DatabaseService {
         return gameRepository.findTopByGuildOrderByDatetimeCreatedDesc(guild).orElseGet(() -> createGame(guildId));
     }
 
+    public List<Game> getAllGames() {
+        return Lists.newArrayList(gameRepository.findAll());
+    }
+
     public User getUser(String discordId) {
         return userRepository.findById(discordId).orElseGet(() -> addUser(discordId));
+    }
+
+    public UserStats getUserStats(String discordId) {
+        User user = getUser(discordId);
+
+        Set<Game> userGames = Sets.newHashSet();
+
+        int yellowsGuessed = 0, greensGuessed = 0;
+        for (GameMove gameMove : IterableUtils.emptyIfNull(user.getGameMoves())) {
+            userGames.add(gameMove.getGame());
+            yellowsGuessed += gameMove.getNewYellowsGuessed();
+            greensGuessed += gameMove.getNewGreensGuessed();
+        }
+
+        int gamesLost = 0, gamesWon = 0;
+        for (Game game : userGames) {
+            if (game.getStatus() == GameStatus.LOSE) {
+                gamesLost++;
+            } else if (game.getStatus() == GameStatus.WIN) {
+                gamesWon++;
+            }
+        }
+
+        var userStats = new UserStats(discordId);
+        userStats.setYellowsGuessed(yellowsGuessed);
+        userStats.setGreensGuessed(greensGuessed);
+        userStats.setGamesLost(gamesLost);
+        userStats.setGamesWon(gamesWon);
+        return userStats;
     }
 
     private Game createGame(String guildId) {
@@ -76,6 +114,11 @@ public class DatabaseService {
         game.setStatus(GameStatus.ACTIVE);
         game.setDatetimeCreated(Instant.now());
         return gameRepository.save(game);
+    }
+
+    public void updateGame(Game game) {
+        gameMoveRepository.saveAll(game.getGameMoves());
+        gameRepository.save(game);
     }
 
     private User addUser(String discordId) {

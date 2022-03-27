@@ -6,6 +6,8 @@ import io.chrislowe.discordle.database.dbo.GameMove;
 import io.chrislowe.discordle.database.dbo.User;
 import io.chrislowe.discordle.database.enums.GameStatus;
 import io.chrislowe.discordle.database.service.DatabaseService;
+import io.chrislowe.discordle.game.guess.LetterGuess;
+import io.chrislowe.discordle.game.guess.LetterState;
 import io.chrislowe.discordle.game.guess.WordGuess;
 import io.chrislowe.discordle.game.words.Dictionary;
 import org.slf4j.Logger;
@@ -26,8 +28,9 @@ public class GameService {
     private DatabaseService databaseService;
 
     public SubmissionOutcome submitGuess(String guildId, String discordId, String guess) {
-        User user = databaseService.getUser(discordId);
+        logger.info("Player {} guesses {}", discordId, guess);
 
+        User user = databaseService.getUser(discordId);
         Game game = databaseService.getActiveGuildGame(guildId);
         if (game == null) {
             return SubmissionOutcome.GAME_UNAVAILABLE;
@@ -41,9 +44,6 @@ public class GameService {
             return SubmissionOutcome.INVALID_WORD;
         }
 
-        logger.info("Player {} guesses {}", discordId, guess);
-        databaseService.submitWord(game, user, guess);
-
         var wordGuess = new WordGuess(guess, game.getWord());
 
         GameStatus gameStatus;
@@ -54,6 +54,10 @@ public class GameService {
         } else {
             gameStatus = GameStatus.ACTIVE;
         }
+
+        byte newYellows = getNewLetterStateCount(game.getGameMoves(), wordGuess, LetterState.MISMATCH);
+        byte newGreens = getNewLetterStateCount(game.getGameMoves(), wordGuess, LetterState.CORRECT);
+        databaseService.submitWord(game, user, guess, newYellows, newGreens);
 
         game.setStatus(gameStatus);
         return switch (gameStatus) {
@@ -85,6 +89,41 @@ public class GameService {
         return game.getGameMoves().stream()
                 .map(GameMove::getUser)
                 .anyMatch(user::equals);
+    }
+
+    private byte getNewLetterStateCount(List<GameMove> gameMoves, WordGuess wordGuess, LetterState desiredLetterState) {
+        byte count = 0;
+
+        wordLetterLoop: for (int i = 0; i < wordGuess.size(); i++) {
+            LetterGuess letterGuess = wordGuess.getLetterGuess(i);
+            if (letterGuess.state() == desiredLetterState) {
+                // Make sure this letter is a novel guess before giving the score
+                for (var gameMove : gameMoves) {
+                    if (gameMove.getWord().charAt(i) == letterGuess.letter()) {
+                        // This letter was already guessed at this position
+                        continue wordLetterLoop;
+                    }
+                }
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public void rebuildDatabaseStats() {
+        for (Game game : databaseService.getAllGames()) {
+            List<GameMove> allGameMoves = game.getGameMoves();
+            for (int i = 0; i < allGameMoves.size(); i++) {
+                GameMove gameMove = allGameMoves.get(i);
+                WordGuess wordGuess = new WordGuess(gameMove.getWord(), game.getWord());
+                List<GameMove> previousMoves = allGameMoves.subList(0, i);
+
+                gameMove.setNewYellowsGuessed(getNewLetterStateCount(previousMoves, wordGuess, LetterState.MISMATCH));
+                gameMove.setNewGreensGuessed(getNewLetterStateCount(previousMoves, wordGuess, LetterState.CORRECT));
+            }
+            databaseService.updateGame(game);
+        }
     }
 
     @Autowired
