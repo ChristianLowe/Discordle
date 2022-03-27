@@ -207,7 +207,7 @@ public class Main {
 
                 UserStats userStats = databaseService.getUserStats(userId);
                 int totalGames = userStats.getGamesLost() + userStats.getGamesWon();
-                float winPercent = userStats.getGamesWon() / (float)((totalGames != 0) ? totalGames : 1);
+                float winPercent = 100 * (userStats.getGamesWon() / (float)((totalGames != 0) ? totalGames : 1));
 
                 String response = "Statistics for user " + userName + '\n' +
                         userStats.getYellowsGuessed() + " new yellows guessed\n" +
