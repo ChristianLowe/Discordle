@@ -20,6 +20,7 @@ public class Guild {
     private Instant datetimeCreated;
 
     @OneToMany(mappedBy = "guild")
+    @OrderBy
     private List<Game> games;
 
     @Override

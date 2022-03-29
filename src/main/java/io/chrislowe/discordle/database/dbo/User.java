@@ -21,6 +21,7 @@ public class User {
     private Instant datetimeCreated;
 
     @OneToMany(mappedBy = "user")
+    @OrderBy
     private List<GameMove> gameMoves;
 
     @Override

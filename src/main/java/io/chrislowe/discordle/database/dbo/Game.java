@@ -21,6 +21,7 @@ public class Game {
     private Guild guild;
 
     @OneToMany(mappedBy = "game")
+    @OrderBy
     private List<GameMove> gameMoves;
 
     @Column(name = "word", nullable = false)
