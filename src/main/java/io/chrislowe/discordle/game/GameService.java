@@ -46,25 +46,23 @@ public class GameService {
 
         var wordGuess = new WordGuess(guess, game.getWord());
 
-        GameStatus gameStatus;
-        if (wordGuess.isCorrectAnswer()) {
-            gameStatus = GameStatus.WIN;
-        } else if (game.getGameMoves().size() == 6) {
-            gameStatus = GameStatus.LOSE;
-        } else {
-            gameStatus = GameStatus.ACTIVE;
-        }
-
         byte newYellows = getNewLetterStateCount(game.getGameMoves(), wordGuess, LetterState.MISMATCH);
         byte newGreens = getNewLetterStateCount(game.getGameMoves(), wordGuess, LetterState.CORRECT);
         databaseService.submitWord(game, user, guess, newYellows, newGreens);
 
-        game.setStatus(gameStatus);
-        return switch (gameStatus) {
-            case WIN -> SubmissionOutcome.GAME_WON;
-            case LOSE -> SubmissionOutcome.GAME_LOST;
-            default -> SubmissionOutcome.ACCEPTED;
-        };
+        if (wordGuess.isCorrectAnswer()) {
+            game.setStatus(GameStatus.WIN);
+            databaseService.updateGame(game);
+            return SubmissionOutcome.GAME_WON;
+        } else if (game.getGameMoves().size() == 6) {
+            game.setStatus(GameStatus.LOSE);
+            databaseService.updateGame(game);
+            return SubmissionOutcome.GAME_LOST;
+        } else {
+            game.setStatus(GameStatus.ACTIVE);
+            databaseService.updateGame(game);
+            return SubmissionOutcome.ACCEPTED;
+        }
     }
 
     public List<WordGuess> getWordGuesses(String guildId) {
