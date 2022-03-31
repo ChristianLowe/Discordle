@@ -1,4 +1,6 @@
 # Discordle
+![Discordle Gameplay](./src/main/resources/assets/gameplay.png)
+
 This Discord bot is a fun game that lets your community play "Wordle"-like puzzles cooperatively.
 
 ## Invite to your server
