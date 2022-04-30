@@ -20,6 +20,7 @@ import io.chrislowe.discordle.game.SubmissionOutcome;
 import io.chrislowe.discordle.game.guess.LetterGuess;
 import io.chrislowe.discordle.game.guess.LetterState;
 import io.chrislowe.discordle.game.guess.WordGuess;
+import io.chrislowe.discordle.game.words.Dictionary;
 import io.chrislowe.discordle.util.FixedTimeScheduler;
 import io.chrislowe.discordle.util.WordGraphicBuilder;
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
+    private Dictionary dictionary;
     private GameService gameService;
     private DatabaseService databaseService;
 
@@ -182,7 +184,7 @@ public class Main {
                     }
                     yield event.reply(response);
                 } else {
-                    String description = getDescriptionForOutcome(outcome, guildId);
+                    String description = getDescriptionForOutcome(outcome, word, guildId);
                     yield event.deferReply().then(createGameBoardFollowup(event, guildId, description));
                 }
             }
@@ -220,11 +222,18 @@ public class Main {
         };
     }
 
-    public String getDescriptionForOutcome(SubmissionOutcome outcome, String guildId) {
-        if (outcome == SubmissionOutcome.GAME_LOST) {
-            return String.format("The correct word was %s.", gameService.getTargetWord(guildId));
+    public String getDescriptionForOutcome(SubmissionOutcome outcome, String submissionWord, String guildId) {
+        var description = new StringBuilder();
+        if (outcome == SubmissionOutcome.GAME_WON) {
+            description.append("Winner winner chicken dinner! 🎉\n\n");
+        } else if (outcome == SubmissionOutcome.GAME_LOST) {
+            String targetWord = gameService.getTargetWord(guildId);
+            description.append("The correct word was ").append(targetWord).append(".\n\n");
+            description.append(dictionary.getDefinition(targetWord)).append("\n\n");
         }
-        return "";
+        description.append(dictionary.getDefinition(submissionWord));
+
+        return description.toString();
     }
 
     public Mono<Void> createGameBoardFollowup(ChatInputInteractionEvent event, String guildId, String response) {
@@ -282,6 +291,11 @@ public class Main {
             .addFile("key-board.png", new ByteArrayInputStream(gameImage))
             .addEmbed(embed)
             .build()).then();
+    }
+
+    @Autowired
+    public void setDictionary(Dictionary dictionary) {
+        this.dictionary = dictionary;
     }
 
     @Autowired

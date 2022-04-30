@@ -17,12 +17,14 @@
 
     <properties>
         <start-class>io.chrislowe.discordle.Main</start-class>
+
         <version.discord4j>3.2.1</version.discord4j>
         <version.logback-classic>1.3.0-alpha14</version.logback-classic>
         <version.guava>31.0.1-jre</version.guava>
         <version.liquibase>4.8.0</version.liquibase>
         <version.db.h2>2.1.210</version.db.h2>
         <version.db.postgres>42.3.3</version.db.postgres>
+
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>

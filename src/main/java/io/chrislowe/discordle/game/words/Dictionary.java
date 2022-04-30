@@ -1,17 +1,19 @@
 package io.chrislowe.discordle.game.words;
 
-import com.google.common.hash.BloomFilter;
+import com.google.common.base.Strings;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
-@SuppressWarnings("UnstableApiUsage")
 @Service
 public class Dictionary {
-    private final BloomFilter<String> bloomFilter;
+    private static final int expectedDictionarySize = 13_000;
+
+    private final Map<String, String> dictionary;
 
     public Dictionary() {
         try {
@@ -19,11 +21,15 @@ public class Dictionary {
             if (input == null) {
                 throw new IOException("dictionary.txt not found in resources");
             }
-            var scanner = new Scanner(input);
 
-            bloomFilter = BloomFilter.create((word, into) -> into.putUnencodedChars(word), 13_000);
-            while (scanner.hasNext()) {
-                bloomFilter.put(scanner.next());
+            dictionary = new HashMap<>(expectedDictionarySize);
+
+            var scanner = new Scanner(input);
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+                String word = line.substring(0, 5);
+                String definition = line.substring(6).replaceAll("\\\\n", "\n");
+                dictionary.put(word, definition);
             }
         } catch (IOException e) {
             throw new RuntimeException("Unable to read dictionary from resources", e);
@@ -31,6 +37,15 @@ public class Dictionary {
     }
 
     public boolean isValidWord(String word) {
-        return bloomFilter.mightContain(word.toLowerCase(Locale.ROOT));
+        return dictionary.containsKey(word);
+    }
+
+    public String getDefinition(String word) {
+        String definition = dictionary.get(word);
+        if (Strings.isNullOrEmpty(definition)) {
+            return word + " is a strange word - I have no idea what it means.";
+        } else {
+            return word + " definition:\n" + definition;
+        }
     }
 }
