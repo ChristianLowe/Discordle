@@ -74,7 +74,7 @@ public class DatabaseService {
 
         Set<Game> userGames = Sets.newHashSet();
 
-        int yellowsGuessed = 0, greensGuessed = 0;
+        int yellowsGuessed = 0, greensGuessed = 0, golfScore = 0;
         for (GameMove gameMove : IterableUtils.emptyIfNull(user.getGameMoves())) {
             userGames.add(gameMove.getGame());
             yellowsGuessed += gameMove.getNewYellowsGuessed();
@@ -85,8 +85,10 @@ public class DatabaseService {
         for (Game game : userGames) {
             if (game.getStatus() == GameStatus.LOSE) {
                 gamesLost++;
+                golfScore = golfScore + 4;
             } else if (game.getStatus() == GameStatus.WIN) {
                 gamesWon++;
+                golfScore = golfScore + game.getGameMoves().size() - 4 ;
             }
         }
 
@@ -95,6 +97,7 @@ public class DatabaseService {
         userStats.setGreensGuessed(greensGuessed);
         userStats.setGamesLost(gamesLost);
         userStats.setGamesWon(gamesWon);
+        userStats.setGolfScore(golfScore);
         return userStats;
     }
 
