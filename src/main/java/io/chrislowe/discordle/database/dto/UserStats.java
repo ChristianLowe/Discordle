@@ -9,6 +9,8 @@ public class UserStats {
     private int gamesLost;
     private int gamesWon;
 
+    private int golfScore;
+
     public UserStats(String discordId) {
         this.discordId = discordId;
     }
@@ -44,6 +46,14 @@ public class UserStats {
 
     public void setGreensGuessed(int greensGuessed) {
         this.greensGuessed = greensGuessed;
+    }
+
+    public int getGolfScore() {
+        return golfScore;
+    }
+
+    public void setGolfScore(int golfScore) {
+        this.golfScore = golfScore;
     }
 
     public int getGamesLost() {

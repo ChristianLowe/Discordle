@@ -214,6 +214,7 @@ public class Main {
                 String response = "Statistics for user " + userName + '\n' +
                         userStats.getYellowsGuessed() + " new yellows guessed\n" +
                         userStats.getGreensGuessed() + " new greens guessed\n" +
+                        userStats.getGolfScore() + " away from par (4)\n" +
                         userStats.getGamesWon() + '/' + totalGames +
                         " games won (" + String.format("%.2f", winPercent) + "%).";
                 yield event.reply(response);
