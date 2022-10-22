@@ -14,7 +14,7 @@ public class UserStats {
 
     private int golfScore;
     
-    private @Nullable Pair<String, Integer>topWord;
+    private @Nullable Pair<String, Integer> topWord;
 
     public UserStats(String discordId) {
         this.discordId = discordId;
