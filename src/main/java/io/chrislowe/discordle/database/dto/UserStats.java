@@ -1,6 +1,9 @@
 package io.chrislowe.discordle.database.dto;
 
+import org.springframework.data.util.Pair;
+
 import java.util.Objects;
+import javax.annotation.Nullable;
 
 public class UserStats {
     private final String discordId;
@@ -10,6 +13,8 @@ public class UserStats {
     private int gamesWon;
 
     private int golfScore;
+    
+    private @Nullable Pair<String, Integer> topWord;
 
     public UserStats(String discordId) {
         this.discordId = discordId;
@@ -70,5 +75,14 @@ public class UserStats {
 
     public void setGamesWon(int gamesWon) {
         this.gamesWon = gamesWon;
+    }
+
+
+    public @Nullable Pair<String, Integer> getTopWord() {
+        return topWord;
+    }
+
+    public void setTopWord(@Nullable Pair<String, Integer> topWord) {
+        this.topWord = topWord;
     }
 }

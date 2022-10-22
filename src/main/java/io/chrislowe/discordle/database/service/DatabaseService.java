@@ -15,11 +15,15 @@ import io.chrislowe.discordle.database.repository.UserRepository;
 import io.chrislowe.discordle.game.words.WordList;
 import liquibase.repackaged.org.apache.commons.collections4.IterableUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 @Service
@@ -74,12 +78,18 @@ public class DatabaseService {
 
         Set<Game> userGames = Sets.newHashSet();
 
+        Map<String, Integer> freqByWord = new HashMap<>();
         int yellowsGuessed = 0, greensGuessed = 0, golfScore = 0;
         for (GameMove gameMove : IterableUtils.emptyIfNull(user.getGameMoves())) {
             userGames.add(gameMove.getGame());
             yellowsGuessed += gameMove.getNewYellowsGuessed();
             greensGuessed += gameMove.getNewGreensGuessed();
+            freqByWord.merge(gameMove.getWord(), 1, Math::addExact);
         }
+        Pair<String, Integer> topWord = freqByWord.entrySet().stream()
+            .max(Entry.comparingByValue())
+            .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
+            .orElse(null);
 
         int gamesLost = 0, gamesWon = 0;
         for (Game game : userGames) {
@@ -98,6 +108,7 @@ public class DatabaseService {
         userStats.setGamesLost(gamesLost);
         userStats.setGamesWon(gamesWon);
         userStats.setGolfScore(golfScore);
+        userStats.setTopWord(topWord);
         return userStats;
     }
 

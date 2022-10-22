@@ -1,5 +1,7 @@
 package io.chrislowe.discordle;
 
+import static java.lang.String.format;
+
 import com.google.common.base.Strings;
 import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
@@ -30,6 +32,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.util.Pair;
 import reactor.core.publisher.Mono;
 
 import java.io.ByteArrayInputStream;
@@ -39,6 +42,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import java.util.StringJoiner;
 
 @SpringBootApplication
 public class Main {
@@ -211,13 +215,23 @@ public class Main {
                 int totalGames = userStats.getGamesLost() + userStats.getGamesWon();
                 float winPercent = 100 * (userStats.getGamesWon() / (float)((totalGames != 0) ? totalGames : 1));
 
-                String response = "Statistics for user " + userName + '\n' +
-                        userStats.getYellowsGuessed() + " new yellows guessed\n" +
-                        userStats.getGreensGuessed() + " new greens guessed\n" +
-                        userStats.getGolfScore() + " away from par (4)\n" +
-                        userStats.getGamesWon() + '/' + totalGames +
-                        " games won (" + String.format("%.2f", winPercent) + "%).";
-                yield event.reply(response);
+                StringJoiner response = new StringJoiner("\n");
+                response.add("Statistics for user " + userName);
+                response.add(userStats.getYellowsGuessed() + " new yellows guessed");
+                response.add(userStats.getGreensGuessed() + " new greens guessed");
+                response.add(userStats.getGolfScore() + " away from par (4)");
+                if (userStats.getTopWord() != null) {
+                    Pair<String, Integer> topWord = userStats.getTopWord();
+                    response.add(format(
+                        "Guessed %s %d times",
+                        topWord.getFirst(),
+                        topWord.getSecond()));
+                }
+                response.add(format("%d/%d games won (%.2f%%).",
+                    userStats.getGamesWon(),
+                    totalGames,
+                    winPercent));
+                yield event.reply(response.toString());
             }
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
         };
