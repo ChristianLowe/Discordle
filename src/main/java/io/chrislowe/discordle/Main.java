@@ -14,6 +14,8 @@ import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.core.spec.InteractionFollowupCreateSpec;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
 import discord4j.discordjson.json.ApplicationCommandRequest;
+import io.chrislowe.discordle.database.dbo.Game;
+import io.chrislowe.discordle.database.dbo.GameMove;
 import io.chrislowe.discordle.database.dbo.User;
 import io.chrislowe.discordle.database.dto.UserStats;
 import io.chrislowe.discordle.database.service.DatabaseService;
@@ -40,6 +42,7 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.StringJoiner;
@@ -131,6 +134,14 @@ public class Main {
         gateway.getRestClient().getApplicationService()
                 .createGlobalApplicationCommand(applicationId, userCommandRequest)
                 .subscribe();
+
+        ApplicationCommandRequest recentCommandRequest = ApplicationCommandRequest.builder()
+            .name("recent")
+            .description("View recent games!")
+            .build();
+        gateway.getRestClient().getApplicationService()
+            .createGlobalApplicationCommand(applicationId, recentCommandRequest)
+            .subscribe();
 
         gateway.on(ChatInputInteractionEvent.class, event -> handleInteractionEvent(event, gateway)).subscribe();
     }
@@ -231,6 +242,27 @@ public class Main {
                     userStats.getGamesWon(),
                     totalGames,
                     winPercent));
+                yield event.reply(response.toString());
+            }
+            case "recent" -> {
+                String guildId = event.getInteraction().getGuildId().map(Snowflake::asString).orElse(null);
+                if (guildId == null) {
+                    yield event.reply("You must run this command in a discord server");
+                }
+                StringJoiner response = new StringJoiner("\n");
+                response.add("Recent games:");
+                List<Game> recentGames = databaseService.getRecentCompletedGames(guildId);
+                if (recentGames.isEmpty()) {
+                    response.add("No recent games found!");
+                }
+                for (Game game : recentGames) {
+                    List<GameMove> gameMoves = game.getGameMoves();
+                    response.add(
+                        format("%d guesses ending with %s, answer was %s",
+                            gameMoves.size(),
+                            gameMoves.get(gameMoves.size() - 1).getWord(),
+                            game.getWord()));
+                }
                 yield event.reply(response.toString());
             }
             default -> throw new UnsupportedOperationException("Unknown command: " + command);
