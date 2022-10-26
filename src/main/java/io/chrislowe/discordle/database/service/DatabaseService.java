@@ -151,6 +151,11 @@ public class DatabaseService {
         return guildRepository.save(guild);
     }
 
+    public List<Game> getRecentCompletedGames(String guildId) {
+        Guild guild = guildRepository.findById(guildId).orElseGet(() -> addGuild(guildId));
+        return gameRepository.findTop5ByGuildAndStatusNotOrderByDatetimeCreatedDesc(guild, GameStatus.ACTIVE);
+    }
+
     @Autowired
     public void setUserRepository(UserRepository userRepository) {
         this.userRepository = userRepository;

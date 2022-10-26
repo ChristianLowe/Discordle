@@ -20,7 +20,7 @@ public class Game {
     @JoinColumn(name = "guild_id", nullable = false)
     private Guild guild;
 
-    @OneToMany(mappedBy = "game")
+    @OneToMany(mappedBy = "game", fetch = FetchType.EAGER)
     @OrderBy
     private List<GameMove> gameMoves;
 
