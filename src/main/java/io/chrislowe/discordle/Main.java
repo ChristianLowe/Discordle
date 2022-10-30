@@ -76,8 +76,7 @@ public class Main {
 
     @Bean
     public FixedTimeScheduler scheduler() {
-        var scheduler = new FixedTimeScheduler(databaseService::resetActiveGames);
-        scheduler.addDailyExecution(LocalTime.NOON);
+        var scheduler = new FixedTimeScheduler(() -> logger.debug("keepalive"));
         scheduler.addDailyExecution(LocalTime.MIDNIGHT);
         return scheduler;
     }
@@ -188,7 +187,7 @@ public class Main {
                 String response = switch (outcome) {
                     case ACCEPTED, GAME_WON, GAME_LOST -> null;
                     case INVALID_WORD -> "Your word is not in the dictionary.";
-                    case GAME_UNAVAILABLE -> "There is currently no game going on. Games begin at 12AM/12PM PST.";
+                    case GUILD_COOLDOWN -> "You've already submitted recently in this guild!";
                     case ALREADY_SUBMITTED -> "You've already submitted a word for this game.";
                     case NOT_ENOUGH_LETTERS, TOO_MANY_LETTERS -> "Your submission must have 5 letters";
                 };

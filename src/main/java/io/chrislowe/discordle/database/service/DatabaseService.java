@@ -20,10 +20,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -131,6 +132,7 @@ public class DatabaseService {
     }
 
     public void updateGame(Game game) {
+        guildRepository.save(game.getGuild());
         gameMoveRepository.saveAll(game.getGameMoves());
         gameRepository.save(game);
     }
@@ -181,4 +183,9 @@ public class DatabaseService {
         this.wordList = wordList;
     }
 
+    public Optional<Instant> getLatestGameMoveForUserInGuild(User user,
+                                                             Guild guild) {
+        return gameMoveRepository.findTopByGameGuildAndUserOrderByDatetimeCreatedDesc(
+            guild, user).map(GameMove::getDatetimeCreated);
+    }
 }

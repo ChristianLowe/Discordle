@@ -3,6 +3,7 @@ package io.chrislowe.discordle.game;
 import com.google.common.collect.Lists;
 import io.chrislowe.discordle.database.dbo.Game;
 import io.chrislowe.discordle.database.dbo.GameMove;
+import io.chrislowe.discordle.database.dbo.Guild;
 import io.chrislowe.discordle.database.dbo.User;
 import io.chrislowe.discordle.database.enums.GameStatus;
 import io.chrislowe.discordle.database.service.DatabaseService;
@@ -16,7 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,10 +36,10 @@ public class GameService {
 
         User user = databaseService.getUser(discordId);
         Game game = databaseService.getActiveGuildGame(guildId);
-        if (game == null) {
-            return SubmissionOutcome.GAME_UNAVAILABLE;
-        } else if (userAlreadySubmitted(user, game)) {
+        if (userAlreadySubmitted(user, game)) {
             return SubmissionOutcome.ALREADY_SUBMITTED;
+        } else if (userOnCooldown(user, game.getGuild())) {
+            return SubmissionOutcome.GUILD_COOLDOWN;
         } else if (guess == null || guess.length() < 5) {
             return SubmissionOutcome.NOT_ENOUGH_LETTERS;
         } else if (guess.length() > 5) {
@@ -52,14 +56,17 @@ public class GameService {
 
         if (wordGuess.isCorrectAnswer()) {
             game.setStatus(GameStatus.WIN);
+            game.getGuild().setHasCurrentGame(false);
             databaseService.updateGame(game);
             return SubmissionOutcome.GAME_WON;
         } else if (game.getGameMoves().size() == 6) {
             game.setStatus(GameStatus.LOSE);
+            game.getGuild().setHasCurrentGame(false);
             databaseService.updateGame(game);
             return SubmissionOutcome.GAME_LOST;
         } else {
             game.setStatus(GameStatus.ACTIVE);
+            game.getGuild().setHasCurrentGame(true);
             databaseService.updateGame(game);
             return SubmissionOutcome.ACCEPTED;
         }
@@ -81,6 +88,16 @@ public class GameService {
     public String getTargetWord(String guildId) {
         Game game = databaseService.getLatestGuildGame(guildId);
         return game != null ? game.getWord() : null;
+    }
+
+    private boolean userOnCooldown(User user, Guild guild) {
+        Optional<Instant>
+            latestMove = databaseService.getLatestGameMoveForUserInGuild(user, guild);
+        if (latestMove.isEmpty()) {
+            return false;
+        }
+        return Instant.now()
+            .isBefore(latestMove.get().plus(Duration.ofHours(12)));
     }
 
     private boolean userAlreadySubmitted(User user, Game game) {
