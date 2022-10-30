@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface GameMoveRepository extends CrudRepository<GameMove, Integer> {
 
-  Optional<GameMove> findTopByGame_GuildAndUserOrderByDatetimeCreatedDesc(
+  Optional<GameMove> findTopByGameGuildAndUserOrderByDatetimeCreatedDesc(
       Guild guild, User user);
 
 }

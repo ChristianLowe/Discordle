@@ -185,7 +185,7 @@ public class DatabaseService {
 
     public Optional<Instant> getLatestGameMoveForUserInGuild(User user,
                                                              Guild guild) {
-        return gameMoveRepository.findTopByGame_GuildAndUserOrderByDatetimeCreatedDesc(
+        return gameMoveRepository.findTopByGameGuildAndUserOrderByDatetimeCreatedDesc(
             guild, user).map(GameMove::getDatetimeCreated);
     }
 }

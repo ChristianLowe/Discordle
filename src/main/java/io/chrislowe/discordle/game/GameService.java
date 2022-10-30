@@ -36,9 +36,7 @@ public class GameService {
 
         User user = databaseService.getUser(discordId);
         Game game = databaseService.getActiveGuildGame(guildId);
-        if (game == null) {
-            return SubmissionOutcome.GAME_UNAVAILABLE;
-        } else if (userAlreadySubmitted(user, game)) {
+        if (userAlreadySubmitted(user, game)) {
             return SubmissionOutcome.ALREADY_SUBMITTED;
         } else if (userOnCooldown(user, game.getGuild())) {
             return SubmissionOutcome.GUILD_COOLDOWN;

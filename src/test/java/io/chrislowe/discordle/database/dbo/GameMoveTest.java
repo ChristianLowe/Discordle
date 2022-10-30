@@ -117,7 +117,7 @@ class GameMoveTest {
                               (byte) 0, (byte) 0);
 
         Optional<GameMove> lastMove =
-            gameMoveRepository.findTopByGame_GuildAndUserOrderByDatetimeCreatedDesc(
+            gameMoveRepository.findTopByGameGuildAndUserOrderByDatetimeCreatedDesc(
                 guild, user);
 
         assertThat(lastMove).isPresent();
