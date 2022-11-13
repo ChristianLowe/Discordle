@@ -91,13 +91,16 @@ public class GameService {
     }
 
     private boolean userOnCooldown(User user, Guild guild) {
-        Optional<Instant>
-            latestMove = databaseService.getLatestGameMoveForUserInGuild(user, guild);
+        Duration remaining = remainingCooldown(user, guild);
+        return remaining.negated().isNegative();
+    }
+
+    public Duration remainingCooldown(User user, Guild guild) {
+        Optional<Instant> latestMove = databaseService.getLatestGameMoveForUserInGuild(user, guild);
         if (latestMove.isEmpty()) {
-            return false;
+            return Duration.ZERO;
         }
-        return Instant.now()
-            .isBefore(latestMove.get().plus(Duration.ofHours(12)));
+        return Duration.ofHours(12).minus(Duration.between(latestMove.get(), Instant.now()));
     }
 
     private boolean userAlreadySubmitted(User user, Game game) {

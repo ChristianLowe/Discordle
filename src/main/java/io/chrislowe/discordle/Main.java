@@ -196,6 +196,18 @@ public class Main {
                     if (outcome == SubmissionOutcome.INVALID_WORD) {
                         yield event.reply(response).withEphemeral(true);
                     }
+                    if (outcome == SubmissionOutcome.GUILD_COOLDOWN) {
+                        User user = databaseService.getUser(discordId);
+                        Game game = databaseService.getActiveGuildGame(guildId);
+                        Duration remaining = gameService.remainingCooldown(
+                            user,
+                            game.getGuild());
+                        yield event.reply(
+                                response + format(" Remaining: %02d:%02d",
+                                                  remaining.toHours(),
+                                                  remaining.toMinutesPart()))
+                            .withEphemeral(true);
+                    }
                     yield event.reply(response);
                 } else {
                     String description = getDescriptionForOutcome(outcome, word, guildId);
