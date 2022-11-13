@@ -13,7 +13,7 @@ import io.chrislowe.discordle.database.repository.GameRepository;
 import io.chrislowe.discordle.database.repository.GuildRepository;
 import io.chrislowe.discordle.database.repository.UserRepository;
 import io.chrislowe.discordle.game.words.WordList;
-import liquibase.repackaged.org.apache.commons.collections4.IterableUtils;
+import org.apache.commons.collections4.IterableUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
