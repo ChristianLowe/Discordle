@@ -92,7 +92,7 @@ public class GameService {
 
     private boolean userOnCooldown(User user, Guild guild) {
         Duration remaining = remainingCooldown(user, guild);
-        return remaining.negated().isNegative();
+        return remaining.toSeconds() > 0;
     }
 
     public Duration remainingCooldown(User user, Guild guild) {
