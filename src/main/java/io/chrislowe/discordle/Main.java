@@ -1,7 +1,5 @@
 package io.chrislowe.discordle;
 
-import static java.lang.String.format;
-
 import com.google.common.base.Strings;
 import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClient;
@@ -10,6 +8,7 @@ import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.object.command.ApplicationCommandInteractionOption;
 import discord4j.core.object.command.ApplicationCommandInteractionOptionValue;
 import discord4j.core.object.command.ApplicationCommandOption;
+import discord4j.core.object.reaction.ReactionEmoji;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.core.spec.InteractionFollowupCreateSpec;
 import discord4j.discordjson.json.ApplicationCommandOptionData;
@@ -25,6 +24,7 @@ import io.chrislowe.discordle.game.guess.LetterGuess;
 import io.chrislowe.discordle.game.guess.LetterState;
 import io.chrislowe.discordle.game.guess.WordGuess;
 import io.chrislowe.discordle.game.words.Dictionary;
+import io.chrislowe.discordle.game.words.WordList;
 import io.chrislowe.discordle.util.FixedTimeScheduler;
 import io.chrislowe.discordle.util.WordGraphicBuilder;
 import org.slf4j.Logger;
@@ -40,17 +40,16 @@ import reactor.core.publisher.Mono;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.LocalTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.StringJoiner;
+
+import static java.lang.String.format;
 
 @SpringBootApplication
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
+    private WordList wordList;
     private Dictionary dictionary;
     private GameService gameService;
     private DatabaseService databaseService;
@@ -110,6 +109,20 @@ public class Main {
                 .build();
         gateway.getRestClient().getApplicationService()
                 .createGlobalApplicationCommand(applicationId, submitCommandRequest)
+                .subscribe();
+
+        ApplicationCommandRequest pollCommandRequest = ApplicationCommandRequest.builder()
+                .name("poll")
+                .description("Start a poll to add a word to the dictionary!")
+                .addOption(ApplicationCommandOptionData.builder()
+                        .name("word")
+                        .description("A 5-letter word of your favor")
+                        .type(ApplicationCommandOption.Type.STRING.getValue())
+                        .required(true)
+                        .build())
+                .build();
+        gateway.getRestClient().getApplicationService()
+                .createGlobalApplicationCommand(applicationId, pollCommandRequest)
                 .subscribe();
 
         ApplicationCommandRequest keyboardCommandRequest = ApplicationCommandRequest.builder()
@@ -213,6 +226,53 @@ public class Main {
                     String description = getDescriptionForOutcome(outcome, word, guildId);
                     yield event.deferReply().then(createGameBoardFollowup(event, guildId, description));
                 }
+            }
+            case "poll" -> {
+                String guildId = event.getInteraction().getGuildId().map(Snowflake::asString).orElse(null);
+                if (guildId == null) {
+                    yield event.reply("You must run this command in a discord server");
+                }
+
+                String word = event
+                        .getOption("word").orElseThrow()
+                        .getValue().orElseThrow()
+                        .asString().toUpperCase(Locale.ROOT);
+                if (word.length() != 5) {
+                    yield event.reply("Your requested word must be 5 characters long")
+                            .withEphemeral(true);
+                }
+
+                boolean inWordList = wordList.isValidWord(word);
+                boolean inDictionary = dictionary.isValidWord(word);
+                if (inWordList && inDictionary) {
+                    yield event.reply("This word is already in the dictionary and word list")
+                            .withEphemeral(true);
+                }
+
+                String userId = event.getOption("user")
+                        .flatMap(ApplicationCommandInteractionOption::getValue)
+                        .map(value -> value.asUser().block())
+                        .map(user -> user.getId().asString())
+                        .orElse(discordId);
+                String userName = gateway.getRestClient()
+                        .getUserById(Snowflake.of(userId))
+                        .getData().block()
+                        .username();
+
+                StringJoiner response = new StringJoiner("\n");
+                response.add(userName + " wants to add the word " + word + " to Discordle!");
+                if (inDictionary) {
+                    response.add("This word is currently valid to submit, but will never be chosen as the solution.");
+                } else {
+                    response.add("This word currently can neither be submitted nor randomly chosen as the solution.");
+                }
+                response.add("Please vote whether you think this is a good word to add.");
+
+                event.reply(response.toString()).subscribe();
+                var message = event.getReply().block();
+                message.addReaction(ReactionEmoji.unicode("\uD83D\uDC4D")).block(); // Thumbs Up
+                message.addReaction(ReactionEmoji.unicode("\uD83D\uDC4E")).block(); // Thumbs Down
+                yield Mono.empty();
             }
             case "keyboard" -> {
                 String guildId = event.getInteraction().getGuildId().map(Snowflake::asString).orElse(null);
@@ -349,6 +409,11 @@ public class Main {
             .addFile("key-board.png", new ByteArrayInputStream(gameImage))
             .addEmbed(embed)
             .build()).then();
+    }
+
+    @Autowired
+    public void setWordList(WordList wordList) {
+        this.wordList = wordList;
     }
 
     @Autowired

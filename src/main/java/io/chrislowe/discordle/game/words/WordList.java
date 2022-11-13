@@ -32,4 +32,8 @@ public class WordList {
         int index = ThreadLocalRandom.current().nextInt(words.size());
         return words.get(index).toUpperCase(Locale.ROOT);
     }
+
+    public boolean isValidWord(String word) {
+        return words.contains(word.toLowerCase(Locale.ROOT));
+    }
 }
